@@ -1,6 +1,6 @@
 {
   "domain": "magicstrip",
-  "name": "ha-magicstrip",
+  "name": "MagicStrip",
   "config_flow": true,
   "documentation": "https://www.github.com/elahd/ha-magicstrip",
   "requirements": ["git+https://github.com/elahd/pymagicstrip@main#pymagicstrip==0.1.1"],

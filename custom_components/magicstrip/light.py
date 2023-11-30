@@ -79,7 +79,7 @@ class MagicStripLight(CoordinatorEntity[MagicStripState], LightEntity):
         self._attr_unique_id = device.address
         self._attr_device_info = device_info
         self._attr_extra_state_attributes = extra_state_attributes
-        self._attr_name = device_info["default_name"]
+        self._attr_name = device_info["name"]
         self._attr_icon: str = "mdi:led-strip-variant"
 
     # This device doesn't return color and brighrness statuses. If we pass None to Home Assistant, it will display

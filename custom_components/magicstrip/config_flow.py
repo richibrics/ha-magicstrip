@@ -17,8 +17,6 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.setLevel(logging.DEBUG)
 
-CONST_WAIT_TIME = 20.0
-
 
 async def _async_has_devices(hass: HomeAssistant) -> bool:
     """Return if there are devices that can be discovered."""

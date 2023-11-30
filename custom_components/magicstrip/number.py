@@ -62,7 +62,7 @@ class MagicStripEffectSpeed(CoordinatorEntity[MagicStripState], NumberEntity):
         self._attr_native_min_value = 0
         self._attr_native_max_value = 100
         self._attr_device_info = device_info
-        self._attr_name = device_info["default_name"]
+        self._attr_name = device_info["name"]
         self._attr_extra_state_attributes = extra_state_attributes
         self._attr_icon = "mdi:speedometer"
 

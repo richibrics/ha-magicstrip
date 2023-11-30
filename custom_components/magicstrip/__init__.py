@@ -68,10 +68,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = state
 
+    # called when bleak finds a new device
     async def detection_callback(
         ble_device: BLEDevice,
         advertisement_data: AdvertisementData,
     ) -> None:
+        # if the found device is already registered in the state devices, update it
         if data := state.devices.get(ble_device.address):
             _LOGGER.debug(
                 "Update: %s %s - %s", ble_device.name, ble_device, advertisement_data
@@ -80,15 +82,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await data.device.detection_callback(ble_device, advertisement_data)
             data.coordinator.async_set_updated_data(data.device.state)
         else:
+            # device is not registered in the state devices, register it if it is a MagicStrip device
             if not device_filter(ble_device, advertisement_data):
-                return
+                return  # not a MagicStrip device
 
+            # New MagicStrip device found to register
             _LOGGER.debug(
                 "Detected: %s %s - %s", ble_device.name, ble_device, advertisement_data
             )
 
+            # Create the MagicStripDevice object for the new bluetooth device
             device = MagicStripDevice(ble_device)
 
+            # Call its internal detection_callback to set the device state
             try:
                 await device.detection_callback(ble_device, advertisement_data)
             except (BleTimeoutError, UpdateFailed) as exc:
@@ -96,12 +102,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     "Timed out when connecting to device. Will try again later. Error: %s",
                     exc,
                 )
-            except (BleakDBusError) as exc:
+            except BleakDBusError as exc:
                 _LOGGER.error(
                     "Error communicating with device. Is the device too far away from your Bluetooth controller?"
                 )
                 raise ConfigEntryNotReady from exc
 
+            # define a method to ask to the device to update its state that we will pass to hass to call update on the device
             async def async_update_data():
                 """Handle an explicit update request."""
                 try:
@@ -118,6 +125,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     ) from exc
                 return device.state
 
+            # register the device updater, passing the method to ask to the device to update its state
             coordinator: DataUpdateCoordinator[MagicStripState] = DataUpdateCoordinator(
                 hass,
                 logger=_LOGGER,
@@ -126,16 +134,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 update_method=async_update_data,
             )
 
+            # register in the state new state of the device
             coordinator.async_set_updated_data(device.state)
 
+            # register the device info
             light_device_info = DeviceInfo(
                 identifiers={(DOMAIN, ble_device.address)},
-                default_name=f"MagicStrip LED ({ble_device.address})",
+                name=f"MagicStrip LED ({ble_device.address})",
             )
 
+            # register the device info about the effect speed
             effect_speed_device_info = DeviceInfo(
                 identifiers={(DOMAIN, ble_device.address)},
-                default_name=f"MagicStrip LED Effect Speed ({ble_device.address})",
+                name=f"MagicStrip LED Effect Speed ({ble_device.address})",
             )
 
             light_extra_state_attributes: MutableMapping[str, Any] = {
@@ -163,7 +174,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     scanner.register_detection_callback(detection_callback)
     await scanner.start()
 
-    hass.config_entries.async_setup_platforms(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
